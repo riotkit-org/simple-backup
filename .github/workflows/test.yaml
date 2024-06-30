@@ -6,7 +6,7 @@ jobs:
     build:
         uses: riotkit-org/.github/.github/workflows/python.release.yaml@release-1
         with:
-            prepareCmd: "make poetry"
+            prepareCmd: "make poetry install"
             testCmd: "make test"
             sonarCloudEnabled: false
 
