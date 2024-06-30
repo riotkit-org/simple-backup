@@ -15,3 +15,4 @@ jobs:
         uses: riotkit-org/.github/.github/workflows/release.container.yaml@release-1
         with:
             dockerImage: ghcr.io/riotkit-org/simple-backup
+            intermediateArtifactsPath: ""
