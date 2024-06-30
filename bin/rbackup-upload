@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [[ $RBACKUP_PATH ]]; then
+    export PYTHONPATH=$RBACKUP_PATH:$PYTHONPATH
+fi
+
+python3 -m rbackup.upload "$@"

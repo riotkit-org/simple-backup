@@ -1,0 +1,11 @@
+name: Test
+on:
+    push:
+
+jobs:
+    build:
+        uses: riotkit-org/.github/.github/workflows/python.release.yaml@release-1
+        with:
+            prepareCmd: "make poetry"
+            testCmd: "make test"
+            sonarCloudEnabled: "false"

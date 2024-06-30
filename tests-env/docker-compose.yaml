@@ -1,0 +1,13 @@
+services:
+  storage:
+    image: minio/minio:latest
+    user: 1000:1000
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=anarchism
+      - MINIO_ROOT_PASSWORD=anarchism
+    volumes:
+      - ./data:/data
+    command: ["server", "/data", "--console-address", ":9001"]
