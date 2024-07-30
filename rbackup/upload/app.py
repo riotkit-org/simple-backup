@@ -48,7 +48,7 @@ def add_args(parser: ArgumentParser):
     Configures argparse
     """
     parser.add_argument("src", help="Local file as a source")
-    parser.add_argument("dest", help="Destination at the remote path", default="")
+    parser.add_argument("dest", help="Destination at the remote path", default="", nargs="?")
 
 
 def run_from_args(args: dict):
