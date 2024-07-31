@@ -66,12 +66,12 @@ def main():
     """
     __main__
     """
-
-    basicConfig(level=INFO, format='%(asctime)s - %(levelname)s :: %(message)s')
-
     parser = ArgumentParser("rbackup.upload")
     add_common_args(parser)
     add_args(parser)
 
     args = vars(parser.parse_args())
+    basicConfig(level=DEBUG if args['debug'] else INFO,
+                format='%(asctime)s - %(levelname)s :: %(message)s')
+
     run_from_args(args)

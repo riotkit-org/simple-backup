@@ -12,6 +12,8 @@ def add_common_args(parser: ArgumentParser):
     Adds common arguments into an ArgumentParser instance
     """
 
+    parser.add_argument("--debug", help="Increase verbosity level", action="store_true")
+
     parser.add_argument(
         "--remote-type", 
         help="Remote type: s3, local", 

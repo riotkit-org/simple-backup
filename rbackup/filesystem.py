@@ -3,7 +3,8 @@ import json
 import re
 import time
 import subprocess
-from logging import info
+from tempfile import TemporaryDirectory
+from logging import info, debug
 from abc import ABC
 from dataclasses import dataclass
 from datetime import datetime
@@ -129,27 +130,134 @@ class S3(Filesystem):
         self.client.delete_object(Bucket=self.bucket_name, Key=self.base_dir + "/" + remote_name)
 
 
+class S3Crypto(Filesystem):
+    """
+    S3 using rclone with encryption
+    """
+
+    password: str
+    salt_password: str
+    endpoint_url: str
+    access_key_id: str
+    secret_key: str
+    bucket_name: str
+    base_dir: str
+
+    def __init__(self, endpoint_url: str, access_key_id: str, secret_key: str,
+                 password: str, salt_password: str, bucket_name: str, base_dir: str):
+
+        self.endpoint_url = endpoint_url
+        self.access_key_id = access_key_id
+        self.secret_key = secret_key
+        self.password = password
+        self.salt_password = salt_password
+        self.bucket_name = bucket_name
+        self.base_dir = base_dir
+
+    def list_files(self) -> List[File]:
+        """
+        Lists files from the remote using `rclone lsjson`
+        """
+
+        listing_output = self._rclone(["lsjson", self._format_url()])  # todo: crypto
+        as_json = json.loads(listing_output)
+        collected: List[File] = []
+
+        for node in as_json:
+            if node["IsDir"]:
+                continue
+            collected.append(File(node["Name"], datetime.fromisoformat(node["ModTime"])))
+
+        return collected
+
+    def upload(self, local_path: str, remote_name: str = ''):
+        """
+        Uploads a file using `rclone copyto`
+        """
+        self._rclone(["copyto", local_path, f"{self._format_url()}/{remote_name}"])
+
+    def delete(self, remote_name: str):
+        """
+        Deletes a file using `rclone delete`
+        """
+
+        self._rclone(["delete", f"{self._format_url()}/{remote_name}"])
+
+    def _format_url(self) -> str:
+        return f"crypto:{self.bucket_name}/{self.base_dir}".strip("/ ")
+
+    def _rclone(self, command: List[str]) -> str:
+        debug(f"rclone {command}")
+
+        with TemporaryDirectory() as temp_dir:
+            assert temp_dir.startswith("/tmp")
+            self.generate_config(temp_dir + "/rclone.conf")
+            try:
+                out = subprocess.check_output(["rclone", "--config", temp_dir + "/rclone.conf"] + command)\
+                      .decode('utf-8')
+            finally:
+                subprocess.check_call(["rm", "-rf", temp_dir])
+        return out
+
+    def _obscure(self, password: str) -> str:
+        return subprocess.check_output(f"echo '{password}' | rclone obscure -", shell=True)\
+               .decode('utf-8')
+
+    def generate_config(self, path: str):
+        with open(path, "w", encoding="utf-8") as config_handle:
+            config = f"""
+[s3]
+type = s3
+provider = Other
+access_key_id = {self.access_key_id}
+secret_access_key = {self.secret_key}
+endpoint = {self.endpoint_url}
+
+[crypto]
+type = crypt
+remote = s3:
+directory_name_encryption = false
+password = {self._obscure(self.password)}
+password2 = {self._obscure(self.salt_password)}
+        """
+            config_handle.write(config)
+            debug(config)
+
+
 def create_fs(fs_type: str, remote_string: str) -> Filesystem:
     """
     Factory method
     """
 
     if fs_type == "local":
-        info("Creating local filesystem")
+        info("Usin local filesystem")
         data = json.loads(remote_string)
         return Local(from_dict_or_env(data, "path", "RBACKUP_PATH", None))
 
     if fs_type == "s3":
-        info("Creating S3 type filesystem")
+        info("Using S3 type filesystem")
         data = json.loads(remote_string)
         return S3(
             endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
-            access_key_id=from_dict_or_env(data, "access_key", "RBACKUP_ACCESS_KEY", None),
-            secret_access_key=from_dict_or_env(data, "secret_key_id", "RBACKUP_SECRET_KEY_ID", 
+            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY", None),
+            secret_access_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY_ID", 
             None),
             bucket_name=from_dict_or_env(data, "bucket_name", "RBACKUP_BUCKET_NAME", None),
             base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
             retries=int(from_dict_or_env(data, "retries", "RBACKUP_RETRIES", 20))
+        )
+    
+    if fs_type == "s3crypto":
+        info("Using S3 with Crypto type filesystem (with rclone)")
+        data = json.loads(remote_string)
+        return S3Crypto(
+            endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
+            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY", None),
+            secret_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY_ID", None),
+            bucket_name=from_dict_or_env(data, "bucket_name", "RBACKUP_BUCKET_NAME", None),
+            base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
+            password=from_dict_or_env(data, "enc_password", "RBACKUP_ENC_PASSWORD", None),
+            salt_password=from_dict_or_env(data, "enc_salt_password", "RBACKUP_ENC_SALT_PASSWORD", None),
         )
 
     raise Exception(f'Unknown filesystem type "{fs_type}"')

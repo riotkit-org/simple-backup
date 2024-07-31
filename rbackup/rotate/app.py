@@ -58,10 +58,11 @@ def run_from_args(args: dict):
 
 def main():
     """ __main """
-    basicConfig(level=INFO, format='%(asctime)s - %(levelname)s :: %(message)s')
-
     parser = ArgumentParser("rbackup-rotate")
     add_args(parser)
     add_common_args(parser)
     args = vars(parser.parse_args())
+    basicConfig(level=DEBUG if args['debug'] else INFO,
+                format='%(asctime)s - %(levelname)s :: %(message)s')
+
     run_from_args(args)
