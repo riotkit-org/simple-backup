@@ -239,8 +239,8 @@ def create_fs(fs_type: str, remote_string: str) -> Filesystem:
         data = json.loads(remote_string)
         return S3(
             endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
-            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY", None),
-            secret_access_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY_ID", 
+            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY_ID", None),
+            secret_access_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY", 
             None),
             bucket_name=from_dict_or_env(data, "bucket_name", "RBACKUP_BUCKET_NAME", None),
             base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
@@ -252,8 +252,8 @@ def create_fs(fs_type: str, remote_string: str) -> Filesystem:
         data = json.loads(remote_string)
         return S3Crypto(
             endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
-            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY", None),
-            secret_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY_ID", None),
+            access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY_ID", None),
+            secret_key=from_dict_or_env(data, "secret_key", "RBACKUP_SECRET_KEY", None),
             bucket_name=from_dict_or_env(data, "bucket_name", "RBACKUP_BUCKET_NAME", None),
             base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
             password=from_dict_or_env(data, "enc_password", "RBACKUP_ENC_PASSWORD", None),
