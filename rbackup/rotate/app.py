@@ -4,7 +4,7 @@ Rotates backup files on the remote or local filesystem
 
 
 from argparse import ArgumentParser
-from logging import info, basicConfig, INFO
+from logging import info, basicConfig, INFO, DEBUG
 from ..filesystem import Filesystem, create_fs, order_files_by_last_modified, filter_by_pattern
 from ..args import add_common_args
 

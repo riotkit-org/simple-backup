@@ -16,6 +16,10 @@ import botocore.client
 from .config import from_dict_or_env
 
 
+class FactoryException(Exception):
+    pass
+
+
 @dataclass
 class File:
     name: str
@@ -224,6 +228,19 @@ password2 = {self._obscure(self.salt_password)}
             debug(config)
 
 
+def load_remote_string(remote_string: str) -> dict:
+    """
+    Loads configuration from inline commandline or from file by autodetection
+    """
+    remote_string = remote_string.strip()
+
+    if not remote_string.startswith("{") and os.path.isfile(remote_string):
+        with open(remote_string, "r", encoding='utf-8') as as_file:
+            remote_string = as_file.read()
+
+    return json.loads(remote_string)
+
+
 def create_fs(fs_type: str, remote_string: str) -> Filesystem:
     """
     Factory method
@@ -231,12 +248,12 @@ def create_fs(fs_type: str, remote_string: str) -> Filesystem:
 
     if fs_type == "local":
         info("Usin local filesystem")
-        data = json.loads(remote_string)
+        data = load_remote_string(remote_string)
         return Local(from_dict_or_env(data, "path", "RBACKUP_PATH", None))
 
     if fs_type == "s3":
         info("Using S3 type filesystem")
-        data = json.loads(remote_string)
+        data = load_remote_string(remote_string)
         return S3(
             endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
             access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY_ID", None),
@@ -246,10 +263,10 @@ def create_fs(fs_type: str, remote_string: str) -> Filesystem:
             base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
             retries=int(from_dict_or_env(data, "retries", "RBACKUP_RETRIES", 20))
         )
-    
+
     if fs_type == "s3crypto":
         info("Using S3 with Crypto type filesystem (with rclone)")
-        data = json.loads(remote_string)
+        data = load_remote_string(remote_string)
         return S3Crypto(
             endpoint_url=from_dict_or_env(data, "endpoint", "RBACKUP_ENDPOINT", None),
             access_key_id=from_dict_or_env(data, "access_key_id", "RBACKUP_ACCESS_KEY_ID", None),
@@ -257,10 +274,11 @@ def create_fs(fs_type: str, remote_string: str) -> Filesystem:
             bucket_name=from_dict_or_env(data, "bucket_name", "RBACKUP_BUCKET_NAME", None),
             base_dir=from_dict_or_env(data, "base_dir", "RBACKUP_BASE_DIR", None),
             password=from_dict_or_env(data, "enc_password", "RBACKUP_ENC_PASSWORD", None),
-            salt_password=from_dict_or_env(data, "enc_salt_password", "RBACKUP_ENC_SALT_PASSWORD", None),
+            salt_password=from_dict_or_env(data, "enc_salt_password",
+                                           "RBACKUP_ENC_SALT_PASSWORD", None),
         )
 
-    raise Exception(f'Unknown filesystem type "{fs_type}"')
+    raise FactoryException(f'Unknown filesystem type "{fs_type}"')
 
 
 def order_files_by_last_modified(input_files: List[File]) -> List[File]:
