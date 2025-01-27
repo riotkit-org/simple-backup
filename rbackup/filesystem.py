@@ -36,6 +36,9 @@ class Filesystem(ABC):
     def delete(self, remote_name: str):
         pass
 
+    def download(self, remote_name: str, local_path: str):
+        pass
+
 
 class Dummy(Filesystem):
     local_list: List[File]
@@ -53,6 +56,9 @@ class Dummy(Filesystem):
         self.local_list = list(
             filter(lambda x: x.name != remote_name, self.local_list)
         )
+
+    def download(self, remote_name: str, local_path: str):
+        pass
 
 
 class Local(Filesystem):
@@ -82,6 +88,9 @@ class Local(Filesystem):
 
     def delete(self, remote_name: str):
         os.unlink(self.base_dir + "/" + remote_name)
+
+    def download(self, remote_name: str, local_path: str):
+        subprocess.check_call(['cp', self.base_dir + "/" + remote_name, local_path])
 
 
 class S3(Filesystem):
@@ -133,6 +142,9 @@ class S3(Filesystem):
     def delete(self, remote_name: str):
         self.client.delete_object(Bucket=self.bucket_name, Key=self.base_dir + "/" + remote_name)
 
+    def download(self, remote_name: str, local_path: str):
+        self.client.download_file(self.bucket_name, self.base_dir + "/" + remote_name, local_path)
+
 
 class S3Crypto(Filesystem):
     """
@@ -179,6 +191,12 @@ class S3Crypto(Filesystem):
         Uploads a file using `rclone copyto`
         """
         self._rclone(["copyto", local_path, f"{self._format_url()}/{remote_name}"])
+
+    def download(self, remote_name: str, local_path: str):
+        """
+        Downloads a file
+        """
+        self._rclone(["copyto", f"{self._format_url()}/{remote_name}", local_path])
 
     def delete(self, remote_name: str):
         """
